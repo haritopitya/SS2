@@ -181,6 +181,27 @@ void goTo(int stop)
   モーター駆動
   停止位置ならモーターを停止してreturn
   */
+  int loopTime = 40; // ms
+  int e = 0, ePrev = 0, eDiff = 0;
+  int v = 200; // 前進速度
+  unsigned int t;
+  while (1)
+  {
+    t = millis();
+    uint16_t l, r, d;
+    l = left.readRangeContinuousMillimeters();
+    r = right.readRangeContinuousMillimeters();
+    e = r > l ? r - l : -(int)(l - r);
+    eDiff = (e - ePrev) * 1000.0 / loopTime;
+    int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
+    setMotorPulse(v + w, v - w);
+    if (forwerd.readRangeContinuousMillimeters() < stop)
+    {
+      setMotorPulse(0, 0);
+      return;
+    }
+    delay(millis() - t);
+  }
 }
 
 void setMotorPulse(int left, int right)
