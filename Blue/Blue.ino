@@ -14,6 +14,9 @@
 // 後方安全距離
 #define BACK_SAFTY_DISTANCE 300 //PSDの値
 
+// PDを無視する距離(ToFの和の閾値)
+#define IGNORE_LENGTH 500 //mm
+
 // 直進用PIDゲイン
 #define KP_NUM 1
 #define KP_DEN 20
@@ -188,18 +191,23 @@ void goTo(int stop)
   while (1)
   {
     t = millis();
-    uint16_t l, r, d;
-    l = left.readRangeContinuousMillimeters();
-    r = right.readRangeContinuousMillimeters();
-    e = r > l ? r - l : -(int)(l - r);
-    eDiff = (e - ePrev) * 1000.0 / loopTime;
-    int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-    setMotorPulse(v + w, v - w);
     if (forwerd.readRangeContinuousMillimeters() < stop)
     {
       setMotorPulse(0, 0);
       return;
     }
+    uint16_t l, r, d;
+    l = left.readRangeContinuousMillimeters();
+    r = right.readRangeContinuousMillimeters();
+    if (l + r > IGNORE_LENGTH)
+    {
+      setMotorPulse(v, v);
+    }
+    e = r > l ? r - l : -(int)(l - r);
+    eDiff = (e - ePrev) * 1000.0 / loopTime;
+    int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
+    setMotorPulse(v + w, v - w);
+
     delay(millis() - t);
   }
 }
