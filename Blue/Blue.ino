@@ -169,38 +169,33 @@ void releaseBall()
 
 void goTo(int stop)
 {
-  // PDを使いながら前進
+  // リアプノプベース制御を使いながら前進
   // 前の距離がstopになったら停止(PIDを使うかは未定)
 
-  /*
-  定時間ループ
-  センサーを読む
-  左右の差を計算
-  Diffを計算
-  PD計算
-  モーター駆動
-  停止位置ならモーターを停止してreturn
-  */
-  int loopTime = 40; // ms
-  int e = 0, ePrev = 0, eDiff = 0;
-  int v = 200; // 前進速度
-  unsigned int t;
+  int v_d = 200; // 前進速度
+  int K = 1;     // パラメータ
+  int L = 400;   // 通路の幅
+  int d = 80;    // センサー同士の距離
   while (1)
   {
-    t = millis();
-    uint16_t l, r, d;
-    l = left.readRangeContinuousMillimeters();
-    r = right.readRangeContinuousMillimeters();
-    e = r > l ? r - l : -(int)(l - r);
-    eDiff = (e - ePrev) * 1000.0 / loopTime;
-    int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-    setMotorPulse(v + w, v - w);
     if (forwerd.readRangeContinuousMillimeters() < stop)
     {
       setMotorPulse(0, 0);
       return;
     }
-    delay(millis() - t);
+    uint16_t l, r;
+    l = left.readRangeContinuousMillimeters();
+    r = right.readRangeContinuousMillimeters();
+    if (l + r > 500)
+    { // 和が長かったら直進
+      setMotorPulse(v_d, v_d);
+      break;
+    }
+    double cos = (double)L / (l + r + d);
+    double x_e = 2 * (l - r) * cos;
+    int v_1 = cos * x_e;  // リアプノプ制御(TBD)
+    int v_2 = -cos * x_e; //(TBD) vの単位はなんだろうか
+    setMotorPulse(v_1, v_2);
   }
 }
 
