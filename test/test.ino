@@ -48,6 +48,10 @@
 #define TOF_LEFT_ADDR 0x33
 #define TOF_RIGHT_ADDR 0x35
 
+//PSD
+#define PSD_LEFT A0
+#define PSD_RIGHT A5
+
 ServoTimer2 servo;
 VL53L0X forwerd, left, right;
 
@@ -55,45 +59,8 @@ void setup()
 {
   Serial.begin(38400);
   servo.attach(SERVO_PIN, 544, 2400);
-  pinMode(TOF_FORWERD_XSHUT, OUTPUT);
-  pinMode(TOF_LEFT_XSHUT, OUTPUT);
-  pinMode(TOF_RIGHT_XSHUT, OUTPUT);
-
-  // ToF
-  //電源オフ
-  digitalWrite(TOF_FORWERD_XSHUT, LOW);
-  digitalWrite(TOF_LEFT_XSHUT, LOW);
-  digitalWrite(TOF_RIGHT_XSHUT, LOW);
-  delay(100);
-  // アドレス変更&計測開始
-  // FORWERD
-  pinMode(TOF_FORWERD_XSHUT, INPUT);
-  delay(50);
-  if (!forwerd.init())
-    Serial.write("fowerd INIT ERROR!");
-  forwerd.setTimeout(500);
-  forwerd.startContinuous();
-  forwerd.setAddress(TOF_FORWERD_ADDR);
-  // LEFT
-  pinMode(TOF_LEFT_XSHUT, INPUT);
-  delay(50);
-  if (!left.init())
-    Serial.write("fowerd INIT ERROR!");
-  left.setTimeout(500);
-  left.startContinuous();
-  left.setAddress(TOF_LEFT_ADDR);
-  // RIGHT
-  pinMode(TOF_RIGHT_XSHUT, INPUT);
-  delay(50);
-  if (!right.init())
-    Serial.write("fowerd INIT ERROR!");
-  right.setTimeout(500);
-  right.startContinuous();
-  right.setAddress(TOF_RIGHT_ADDR);
-
-  // 開始ボタン
-  while (digitalRead(BUTTON_PIN))
-    ;
+  servo.write(1000);
+  
 }
 
 // メインルーチン用
@@ -110,14 +77,8 @@ void setMotorPulse(int left, int right);
 
 void loop()
 {
-  back();        // 後ろに十分距離があることを確認しながら右折位置まで後退
-  rightTurn();   // 右折
-  goToBall();    // ボールを取る位置まで前進
-  getBall();     // ボール取得動作
-  back();        // 右折位置まで後退
-  rightTurn();   // 右折
-  goToSouko();   // 倉庫まで前進
-  releaseBall(); // ボール収納動作
+  goTo(100);
+  
 }
 
 void back()
@@ -184,36 +145,44 @@ void goTo(int stop)
   モーター駆動
   停止位置ならモーターを停止してreturn
   */
-  int loopTime = 40; // ms
-  int e = 0, ePrev = 0, eDiff = 0;
+  int loopTime = 50; // ms
+  double e = 0, ePrev = 0, eDiff = 0;
   int v = 200; // 前進速度
   unsigned int t;
   while (1)
   {
     t = millis();
-    if (forwerd.readRangeContinuousMillimeters() < stop)
-    {
-      setMotorPulse(0, 0);
-      return;
-    }
-    uint16_t l, r, d;
-    l = left.readRangeContinuousMillimeters();
-    r = right.readRangeContinuousMillimeters();
-    if (l + r > IGNORE_LENGTH)
+    int l, r, d;
+    l = analogRead(PSD_LEFT);
+    r = analogRead(PSD_RIGHT);
+    if (l + r < 200)
     {
       setMotorPulse(v, v);
+      continue;
     }
-    e = r > l ? r - l : -(int)(l - r);
+    e = r - l;
     eDiff = (e - ePrev) * 1000.0 / loopTime;
     int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
     setMotorPulse(v + w, v - w);
-
+      Serial.print(l);
+    Serial.print(",");
+    Serial.print(r);
+    Serial.print(","); 
+    Serial.print((int)e);
+    Serial.print(","); 
+    Serial.print(eDiff);
+    Serial.print(",");
+    Serial.print(w);
+    Serial.print(",");
+    Serial.println();
     delay(millis() - t);
+    ePrev=e;
   }
 }
 
 void setMotorPulse(int left, int right)
 {
+  right+=10;
   if (left > 0)
   {
     analogWrite(MOTOR_L_IN1, min(left, 255));

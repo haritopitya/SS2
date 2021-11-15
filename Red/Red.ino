@@ -36,8 +36,8 @@
 #define TOF_RIGHT_XSHUT 14
 
 // アームサーボ位置
-#define ARM_UP_POS 100
-#define ARM_DOUWN_POS 200
+#define ARM_UP_POS 1000
+#define ARM_DOWN_POS 2000
 #define ARM_MOVE_SPEED 10 //puls/s
 
 // TOFADDRESS
@@ -140,7 +140,7 @@ void goToBall()
 void getBall()
 {
   // アームを下す
-  servo.write(ARM_DOUWN_POS);
+  servo.write(ARM_DOWN_POS);
   delay(500);
   // 前進&停止
   int v = 150; // 前進速度
@@ -172,7 +172,7 @@ void goToSouko()
 void releaseBall()
 {
   //アームを下す
-  servo.write(ARM_DOUWN_POS);
+  servo.write(ARM_DOWN_POS);
   //ちょっと待って
   delay(1000);
   //アームを上げる
