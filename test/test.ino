@@ -59,7 +59,7 @@ void setup()
 {
   Serial.begin(38400);
   servo.attach(SERVO_PIN, 544, 2400);
-  servo.write(1000);
+  servo.write(1500);
   
 }
 
@@ -77,7 +77,7 @@ void setMotorPulse(int left, int right);
 
 void loop()
 {
-  goTo(100);
+  //goTo(100);
   
 }
 
