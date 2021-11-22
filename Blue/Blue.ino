@@ -39,8 +39,8 @@
 #define TOF_RIGHT_XSHUT 14
 
 // アームサーボ位置
-#define ARM_UP_POS 1000
-#define ARM_DOWN_POS 2000
+#define ARM_UP_POS 544
+#define ARM_DOWN_POS 1600
 #define ARM_MOVE_SPEED 10 //puls/s
 
 // TOFADDRESS
