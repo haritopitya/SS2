@@ -2,16 +2,16 @@
 
 // 停止距離
 #define BALL_GET_TIME 3000
-#define BALL_RELEASE_TIME 3000
+#define BALL_RELEASE_TIME 1500
 
 // アームを下した後の移動時間
-#define GET_BALL_TIME 2000 // ms
+#define GET_BALL_TIME 1000 // ms
 
 // 旋回時間
-#define TURN_TIME 500 // ms
+#define TURN_TIME 550 // ms
 
 // 回転位置までの後退時間
-#define BACK_TIME 1550 // ms
+#define BACK_TIME 1300 // ms
 
 // 後方安全距離
 #define BACK_SAFTY_DISTANCE 300 //PSDの値
@@ -45,6 +45,10 @@
 #define PSD_LEFT A0
 #define PSD_RIGHT A5
 
+// Battery
+#define BATTERY_PIN A1
+#define BATTERY_REF 200
+
 ServoTimer2 servo;
 
 // メインルーチン用
@@ -56,7 +60,6 @@ void goToSouko();
 void releaseBall();
 
 // 内部関数
-void goTo(int stop);
 void setMotorPulse(int left, int right);
 void blink(int n);
 
@@ -81,27 +84,21 @@ void setup()
   //     }
   //   }
   // }
-  {
-    back(); //最初の交差点中心まで後退
-    rightTurn();
-    servo.write(ARM_DOWN_POS);
-    goToBall();
-    getBall();
-    back();
-    rightTurn();
-  }
 }
 
 void loop()
 {
-  // back(); //最初の交差点中心まで後退
-  // rightTurn();
-  //servo.write(ARM_DOWN_POS);
-  // goToBall();
-  // getBall();
-  // back();
-  // rightTurn();
-  // goToSouko();
+  {
+    back();                    //最初の交差点中心まで後退
+    rightTurn();               // ボール方向へ
+    servo.write(ARM_DOWN_POS); // アームを下す
+    goToBall();                // ボールへ
+    getBall();                 // アームをあげる
+    back();                    // 交差点まで後退
+    rightTurn();               // 倉庫に向く
+    goToSouko();
+    releaseBall();
+  }
 }
 
 void back()
@@ -118,8 +115,9 @@ void back()
     int l, r, d;
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
-    if (l + r < 400)
+    if (l + r < 500)
     {
+      blink(1);
       setMotorPulse(-v, -v);
       delay(BACK_TIME);
       setMotorPulse(0, 0);
@@ -151,20 +149,21 @@ void rightTurn()
   // 90度右旋回
   // 要調節
   blink(3);
-  int v = 200;
-  setMotorPulse(v, -v);
+  int v = 150;
+  setMotorPulse(-v, v);
   delay(TURN_TIME);
   setMotorPulse(0, 0);
 }
+
 void goToBall()
 {
   int l, r, d;
   l = analogRead(PSD_LEFT);
   r = analogRead(PSD_RIGHT);
   int v = 150;
-  setMotorPulse(v, v);
+  setMotorPulse(v, v - 10);
   // 横壁検出まで直進
-  while (l + r < 400)
+  while (l + r < 500)
   {
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
@@ -200,16 +199,17 @@ void goToBall()
   }
   setMotorPulse(0, 0);
 }
+
 void getBall()
 {
   // アームを持ち上げる
   int i = servo.read();
-  for (i; i != ARM_UP_POS; i--)
+  for (i; i > ARM_UP_POS; i--)
   {
     servo.write(i);
     delay(ARM_MOVE_SPEED);
   }
-  delay(50);
+  delay(10);
 }
 
 void goToSouko()
@@ -217,10 +217,10 @@ void goToSouko()
   int l, r, d;
   l = analogRead(PSD_LEFT);
   r = analogRead(PSD_RIGHT);
-  int v = 200;
-  setMotorPulse(v, v);
+  int v = 150;
+  setMotorPulse(v, v - 10);
   // 横壁検出まで直進
-  while (l + r < 400)
+  while (l + r < 500)
   {
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
@@ -230,18 +230,18 @@ void goToSouko()
   while (1)
   {
     t = millis();
-    int l, r, d;
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
-    if (l + r < 300)
+    if (l + r < 500)
     {
-      setMotorPulse(v, v);
+      setMotorPulse(v, v - 20);
+      blink(1);
       break;
     }
     e = r - l;
     eDiff = (e - ePrev) * 1000 / (t - prevTime);
     int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-    setMotorPulse(-(v + w), -(v - w));
+    setMotorPulse((v - w), (v + w));
     {
       Serial.print(l);
       Serial.print(",");
@@ -258,28 +258,26 @@ void goToSouko()
     ePrev = e;
     prevTime = t;
   }
-  while (l + r < 400)
+
+  while (l + r < 500)
   {
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
   }
-  e = 0, ePrev = 0, eDiff = 0;
-  prevTime = millis(), t, startTime = millis();
+  e = 0;
+  ePrev = 0;
+  eDiff = 0;
+  prevTime = millis();
+  startTime = millis();
   while ((millis() - startTime) < BALL_RELEASE_TIME)
   {
     t = millis();
-    int l, r, d;
     l = analogRead(PSD_LEFT);
     r = analogRead(PSD_RIGHT);
-    if (l + r < 300)
-    {
-      setMotorPulse(v, v);
-      break;
-    }
     e = r - l;
     eDiff = (e - ePrev) * 1000 / (t - prevTime);
     int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-    setMotorPulse(-(v + w), -(v - w));
+    setMotorPulse((v + w), (v - w));
     {
       Serial.print(l);
       Serial.print(",");
@@ -301,61 +299,19 @@ void goToSouko()
 
 void releaseBall()
 {
+  blink(3);
   //アームを下す
-  servo.write(ARM_DOWN_POS);
+  int i = servo.read();
+  for (i; i <= 1700; i++)
+  {
+    servo.write(i);
+    delay(ARM_MOVE_SPEED);
+  }
   //ちょっと待って
-  delay(1000);
+  delay(500);
   //アームを上げる
   servo.write(ARM_UP_POS);
-  delay(500);
-}
-
-void goTo(int stop)
-{
-  // PDを使いながら前進
-  // 前の距離がstopになったら停止(PIDを使うかは未定)
-
-  /*
-  定時間ループ
-  センサーを読む
-  左右の差を計算
-  Diffを計算
-  PD計算
-  モーター駆動
-  停止位置ならモーターを停止してreturn
-  */
-  double e = 0, ePrev = 0, eDiff = 0;
-  int v = 200; // 前進速度
-  unsigned int prevTime = millis(), t;
-  while (1)
-  {
-    t = millis();
-    int l, r, d;
-    l = analogRead(PSD_LEFT);
-    r = analogRead(PSD_RIGHT);
-    if (l + r < 300)
-    {
-      setMotorPulse(v, v);
-      continue;
-    }
-    e = r - l;
-    eDiff = (e - ePrev) * 1000 / (t - prevTime);
-    int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-    setMotorPulse(v + w, v - w);
-    Serial.print(l);
-    Serial.print(",");
-    Serial.print(r);
-    Serial.print(",");
-    Serial.print((int)e);
-    Serial.print(",");
-    Serial.print(eDiff);
-    Serial.print(",");
-    Serial.print(w);
-    Serial.print(",");
-    Serial.println();
-    ePrev = e;
-    prevTime = t;
-  }
+  delay(20);
 }
 
 void blink(int n)
@@ -363,9 +319,9 @@ void blink(int n)
   for (int i = 0; i < n; i++)
   {
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
+    delay(50);
     digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
+    delay(50);
   }
 }
 
