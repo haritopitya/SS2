@@ -5,14 +5,14 @@
 #define DEBUG
 
 // 停止までの時間
-#define BALL_GET_TIME 2000
-#define BALL_RELEASE_TIME 1500
+#define BALL_GET_TIME 2000ULL
+#define BALL_RELEASE_TIME 1500ULL
 
 // 旋回時間
-#define TURN_TIME 550 // ms
+#define TURN_TIME 550ULL // ms
 
 // 回転位置までの後退時間
-#define BACK_TIME 1300 // ms
+#define BACK_TIME 1300ULL // ms
 
 // 後方安全距離
 #define BACK_SAFTY_DISTANCE 300 // mm
@@ -41,6 +41,8 @@
 #define TOF_LEFT_XSHUT 12
 #define TOF_RIGHT_XSHUT 13
 
+#define BATTERY_REF A0
+
 // アームサーボ位置
 #define ARM_UP_POS 544
 #define ARM_DOWN_POS 1600
@@ -50,6 +52,9 @@
 #define TOF_BACK_ADDR 0x31
 #define TOF_LEFT_ADDR 0x33
 #define TOF_RIGHT_ADDR 0x35
+
+// 電池基準電圧
+#define BATTERY_BASE_VOLTAGE (2.4 / 3.3 * 1024)
 
 ServoTimer2 servo;
 VL53L0X back_senser, left, right;
@@ -172,7 +177,7 @@ void back()
   blink(1);
   // 転回位置まで後退
   setMotorPulse(v, v);
-  delay(BACK_TIME);
+  delay(BACK_TIME * analogRead(BATTERY_REF) / BATTERY_BASE_VOLTAGE);
   setMotorPulse(0, 0);
 }
 
@@ -183,7 +188,7 @@ void rightTurn()
   blink(3);
   int v = 150;
   setMotorPulse(v, -v);
-  delay(TURN_TIME);
+  delay(TURN_TIME * analogRead(BATTERY_REF) / BATTERY_BASE_VOLTAGE);
   setMotorPulse(0, 0);
 }
 
@@ -202,7 +207,7 @@ void goToBall()
   // 検出後PDで直進
   unsigned int startTime = millis();
   PDreset();
-  while ((millis() - startTime) < BALL_GET_TIME)
+  while ((millis() - startTime) < BALL_GET_TIME * analogRead(BATTERY_REF) / BATTERY_BASE_VOLTAGE)
     PD(v);
   setMotorPulse(0, 0); // 停止
 }
@@ -248,7 +253,7 @@ void goToSouko()
   // リリース位置までPDで
   unsigned int startTime = millis();
   PDreset();
-  while ((millis() - startTime) < BALL_RELEASE_TIME)
+  while ((millis() - startTime) < BALL_RELEASE_TIME * analogRead(BATTERY_REF) / BATTERY_BASE_VOLTAGE)
     PD(v);
   setMotorPulse(0, 0); // 停止
 }
