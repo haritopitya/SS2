@@ -1,5 +1,6 @@
 #include <VL53L0X.h>
 #include <ServoTimer2.h>
+#include <Wire.h>
 
 // 停止距離
 #define BALL_GET_DISTANCE 20
@@ -39,8 +40,8 @@
 #define TOF_RIGHT_XSHUT 14
 
 // アームサーボ位置
-#define ARM_UP_POS 1000
-#define ARM_DOWN_POS 2000
+#define ARM_UP_POS 544
+#define ARM_DOWN_POS 1600
 #define ARM_MOVE_SPEED 10 //puls/s
 
 // TOFADDRESS
@@ -48,19 +49,22 @@
 #define TOF_LEFT_ADDR 0x33
 #define TOF_RIGHT_ADDR 0x35
 
-//PSD
-#define PSD_LEFT A0
-#define PSD_RIGHT A5
-
 ServoTimer2 servo;
-VL53L0X forwerd, left, right;
+VL53L0X back_senser,left,right;
 
 void setup()
 {
   Serial.begin(38400);
-  servo.attach(SERVO_PIN, 544, 2400);
-  servo.write(1000);
-  
+  Wire.begin();
+
+  if (!back_senser.init())
+    Serial.write("fowerd INIT ERROR!");
+  back_senser.setTimeout(500);
+  back_senser.startContinuous();
+  back_senser.setAddress(TOF_FORWERD_ADDR);
+  // // 開始ボタン
+  // while (digitalRead(BUTTON_PIN))
+  //   ;
 }
 
 // メインルーチン用
@@ -77,8 +81,19 @@ void setMotorPulse(int left, int right);
 
 void loop()
 {
-  goTo(100);
-  
+  // back();        // 後ろに十分距離があることを確認しながら右折位置まで後退
+  // rightTurn();   // 右折
+  // goToBall();    // ボールを取る位置まで前進
+  // getBall();     // ボール取得動作
+  // back();        // 右折位置まで後退
+  // rightTurn();   // 右折
+  // goToSouko();   // 倉庫まで前進
+  // releaseBall(); // ボール収納動作
+  int b;
+  b = back_senser.readRangeContinuousMillimeters();
+  Serial.print((int)b);
+  Serial.print("\n");
+  //delay(100);
 }
 
 void back()
@@ -145,44 +160,36 @@ void goTo(int stop)
   モーター駆動
   停止位置ならモーターを停止してreturn
   */
-  int loopTime = 50; // ms
-  double e = 0, ePrev = 0, eDiff = 0;
+  int loopTime = 40; // ms
+  int e = 0, ePrev = 0, eDiff = 0;
   int v = 200; // 前進速度
   unsigned int t;
   while (1)
   {
     t = millis();
-    int l, r, d;
-    l = analogRead(PSD_LEFT);
-    r = analogRead(PSD_RIGHT);
-    if (l + r < 200)
+    if (back_senser.readRangeContinuousMillimeters() < stop)
+    {
+      setMotorPulse(0, 0);
+      return;
+    }
+    uint16_t l, r, d;
+    l = left.readRangeContinuousMillimeters();
+    r = right.readRangeContinuousMillimeters();
+    if (l + r > IGNORE_LENGTH)
     {
       setMotorPulse(v, v);
-      continue;
     }
-    e = r - l;
+    e = r > l ? r - l : -(int)(l - r);
     eDiff = (e - ePrev) * 1000.0 / loopTime;
     int w = e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
     setMotorPulse(v + w, v - w);
-      Serial.print(l);
-    Serial.print(",");
-    Serial.print(r);
-    Serial.print(","); 
-    Serial.print((int)e);
-    Serial.print(","); 
-    Serial.print(eDiff);
-    Serial.print(",");
-    Serial.print(w);
-    Serial.print(",");
-    Serial.println();
+
     delay(millis() - t);
-    ePrev=e;
   }
 }
 
 void setMotorPulse(int left, int right)
 {
-  right+=10;
   if (left > 0)
   {
     analogWrite(MOTOR_L_IN1, min(left, 255));
