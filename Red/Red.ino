@@ -9,21 +9,22 @@
 #define BALL_RELEASE_TIME 1500
 
 // 旋回時間
-#define TURN_TIME 550 // ms
+#define TURN_TIME 750 // ms
 
 // 回転位置までの後退時間
-#define BACK_TIME 1300 // ms
+#define BACK_TIME 500 // ms
 
 // PDを無視する距離(ToFの和の閾値)
-#define IGNORE_LENGTH 500 //mm
+#define IGNORE_LENGTH 430 // mm
 
 // 直進用PIDゲイン
-#define KP_NUM 1
-#define KP_DEN 3
-#define KD_NUM 1
-#define KD_DEN 5
-#define KI_NUM 1
-#define KI_DEN 1
+#define KP_NUM 3
+#define KP_DEN 10
+#define KD_NUM 3
+#define KD_DEN 20
+#define KS_NUM 3
+#define KS_DEN 2
+#define ROAD_WIDTH 350
 
 // 各種ピン
 #define MOTOR_L_IN1 5
@@ -41,7 +42,8 @@
 // アームサーボ位置
 #define ARM_UP_POS 544
 #define ARM_DOWN_POS 1600
-#define ARM_MOVE_SPEED 1 //ms/puls
+#define ARM_RELAESE_POS 1800
+#define ARM_MOVE_SPEED 1 // ms/puls
 
 // TOFADDRESS
 #define TOF_BACK_ADDR 0x31
@@ -65,11 +67,12 @@ void setMotorPulse(int left, int right);
 void blink(int n);
 void PD(int v);
 void PDreset();
-void PDdebug(int l, int r, int e, int ediff, int w);
+void PDdebug(int l, int r, int e, int ediff, int w, int f);
 
 // PD制御用グローバル変数
 int l, r;
 int e, ePrev, w;
+int f;
 double eDiff;
 unsigned int t, prevTime;
 
@@ -77,42 +80,37 @@ void setup()
 {
   Serial.begin(115200);
   Wire.begin();
-  servo.attach(SERVO_PIN, 544, 2400);
-  pinMode(TOF_BACK_XSHUT, OUTPUT);
+  // servo.attach(SERVO_PIN, 544, 2400);
+  // pinMode(TOF_BACK_XSHUT, OUTPUT);
   pinMode(TOF_LEFT_XSHUT, OUTPUT);
   pinMode(TOF_RIGHT_XSHUT, OUTPUT);
 
   // ToF
   //電源オフ
-  digitalWrite(TOF_BACK_XSHUT, LOW);
+  // digitalWrite(TOF_BACK_XSHUT, LOW);
   digitalWrite(TOF_LEFT_XSHUT, LOW);
   digitalWrite(TOF_RIGHT_XSHUT, LOW);
   delay(100);
+  Serial.print("start !!");
   // アドレス変更&計測開始
   // BACK
-  pinMode(TOF_BACK_XSHUT, INPUT);
-  delay(50);
-  if (!back_senser.init())
-  {
-    while (1)
-    {
-      Serial.write("BACK INIT ERROR!");
-      blink(3);
-    }
-  }
-  back_senser.setTimeout(500);
-  back_senser.startContinuous();
-  back_senser.setAddress(TOF_BACK_ADDR);
+  // pinMode(TOF_BACK_XSHUT, INPUT);
+  // delay(50);
+  // while (!back_senser.init())
+  // {
+  //     Serial.write("BACK INIT ERROR!");
+  //     blink(3);
+  // }
+  // back_senser.setTimeout(500);
+  // back_senser.startContinuous();
+  // back_senser.setAddress(TOF_BACK_ADDR);
   // LEFT
   pinMode(TOF_LEFT_XSHUT, INPUT);
   delay(50);
-  if (!left.init())
+  while (!left.init())
   {
-    while (1)
-    {
-      Serial.write("LEFT INIT ERROR!");
-      blink(3);
-    }
+    Serial.print("LEFT INIT ERROR!");
+    blink(3);
   }
   left.setTimeout(500);
   left.startContinuous();
@@ -120,13 +118,10 @@ void setup()
   // RIGHT
   pinMode(TOF_RIGHT_XSHUT, INPUT);
   delay(50);
-  if (!right.init())
+  while (!right.init())
   {
-    while (1)
-    {
-      Serial.write("RIGHT INIT ERROR!");
-      blink(3);
-    }
+    Serial.print("RIGHT INIT ERROR!");
+    blink(3);
   }
   right.setTimeout(500);
   right.startContinuous();
@@ -134,22 +129,22 @@ void setup()
 
   blink(5);
   // 開始ボタン
-  while (digitalRead(BUTTON_PIN))
-    ;
+  // while (digitalRead(BUTTON_PIN))
+  //   ;
 }
 
 void loop()
 {
-  back();                    // 左折位置まで後退
-  leftTurn();                // 左折
-  servo.write(ARM_DOWN_POS); // アームを下す
-  goToBall();                // ボールを取る位置まで前進
-  getBall();                 // ボール取得動作
-  waitBlue();                // 後ろを通過するまで待機
-  back();                    // 左折位置まで後退
-  leftTurn();                // 左折
-  goToSouko();               // 倉庫まで前進
-  releaseBall();             // ボール収納動作
+  // back(); // 左折位置まで後退
+  // leftTurn();                // 左折
+  // servo.write(ARM_DOWN_POS); // アームを下す
+  // goToBall();                // ボールを取る位置まで前進
+  // getBall();                 // ボール取得動作
+  // waitBlue();                // 後ろを通過するまで待機
+  // back();                    // 左折位置まで後退
+  // leftTurn();                // 左折
+  // goToSouko();               // 倉庫まで前進
+  // releaseBall();             // ボール収納動作
 }
 
 void back()
@@ -263,7 +258,7 @@ void releaseBall()
   blink(3);
   //アームを下す
   int i = servo.read();
-  for (i; i <= ARM_DOWN_POS; i++)
+  for (i; i <= ARM_RELAESE_POS; i++)
   {
     servo.write(i);
     delay(ARM_MOVE_SPEED);
@@ -282,7 +277,7 @@ void blink(int n) // LED点滅
     digitalWrite(LED_BUILTIN, HIGH);
     delay(50);
     digitalWrite(LED_BUILTIN, LOW);
-    delay(50);
+    delay(100);
   }
 }
 
@@ -299,7 +294,8 @@ void PD(int v)
   r = right.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
-  w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
+  f = l + r - ROAD_WIDTH;
+  w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN - e / abs(e) * f * KS_NUM / KS_DEN;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
@@ -313,12 +309,12 @@ void PD(int v)
     rightSpeed = v + w;
   }
   setMotorPulse(leftSpeed, rightSpeed);
-  PDdebug(l, r, e, (int)eDiff, w);
+  PDdebug(l, r, e, (int)eDiff, w, f);
   ePrev = e;
   prevTime = t;
 }
 
-void PDdebug(int l, int r, int e, int eDiff, int w)
+void PDdebug(int l, int r, int e, int eDiff, int w, int f)
 {
 #ifdef DEBUG
   Serial.print(l);
@@ -328,6 +324,8 @@ void PDdebug(int l, int r, int e, int eDiff, int w)
   Serial.print(e);
   Serial.print(",");
   Serial.print(eDiff);
+  Serial.print(",");
+  Serial.print(f);
   Serial.print(",");
   Serial.println(w);
 #endif
