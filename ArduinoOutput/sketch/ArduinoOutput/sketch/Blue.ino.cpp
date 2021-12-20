@@ -1,3 +1,6 @@
+#line 1 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\ArduinoOutput\\sketch\\Blue.ino.cpp"
+#include <Arduino.h>
+#line 1 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 #include <VL53L0X.h>
 #include <ServoTimer2.h>
 #include <Wire.h>
@@ -80,6 +83,13 @@ int f, x;
 double eDiff;
 unsigned int t, prevTime;
 
+#line 83 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+void setup();
+#line 146 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+void loop();
+#line 339 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+void PDdebug(int l, int r, int e, int eDiff, int w, int f);
+#line 83 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 void setup()
 {
   Serial.begin(115200);
@@ -376,3 +386,4 @@ void setMotorPulse(int left, int right)
     analogWrite(MOTOR_R_IN2, min(-right, 255));
   }
 }
+

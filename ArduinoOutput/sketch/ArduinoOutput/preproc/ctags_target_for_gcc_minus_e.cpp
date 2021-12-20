@@ -1,58 +1,42 @@
-#include <VL53L0X.h>
-#include <ServoTimer2.h>
-#include <Wire.h>
+#line 1 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\ArduinoOutput\\preproc\\ctags_target_for_gcc_minus_e.cpp"
+# 1 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+# 2 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino" 2
+# 3 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino" 2
+# 4 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino" 2
 
-#define DEBUG
+
 
 // 停止までの時間
-#define BALL_GET_TIME 1000
-#define ARM_DOWN_TIME 1000
-#define BALL_RELEASE_TIME 1500
+
+
+
 
 // 旋回時間
-#define TURN_TIME 850 // ms
+
 
 // 回転位置までの後退時間
-#define BACK_TIME 600 // ms
+
 
 // 後方安全距離
-#define BACK_SAFTY_DISTANCE 300 // mm
+
 
 // PDを無視する距離(ToFの和の閾値)
-#define IGNORE_LENGTH 440 // mm
+
 
 // 直進用PIDゲイン
-#define KP_NUM 3
-#define KP_DEN 10
-#define KD_NUM 2
-#define KD_DEN 20
-#define KS_NUM 4
-#define KS_DEN 2
-#define ROAD_WIDTH 350
-
+# 33 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 // 各種ピン
-#define MOTOR_L_IN1 5
-#define MOTOR_L_IN2 6
-#define MOTOR_R_IN1 9
-#define MOTOR_R_IN2 10
-
-#define SERVO_PIN 2
-#define BUTTON_PIN 4
-
-#define TOF_BACK_XSHUT 11
-#define TOF_LEFT_XSHUT 7
-#define TOF_RIGHT_XSHUT 8
-
+# 46 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 // アームサーボ位置
-#define ARM_UP_POS 544
-#define ARM_DOWN_POS 1600
-#define ARM_RELEASE_POS 1800
-#define ARM_MOVE_SPEED 1 // ms/puls
+
+
+
+
 
 // TOFADDRESS
-#define TOF_BACK_ADDR 0x31
-#define TOF_LEFT_ADDR 0x33
-#define TOF_RIGHT_ADDR 0x35
+
+
+
 
 ServoTimer2 servo;
 VL53L0X back_senser, left, right;
@@ -86,14 +70,14 @@ void setup()
   Wire.begin();
   // servo.attach(SERVO_PIN, 544, 2400);
   //  pinMode(TOF_BACK_XSHUT, OUTPUT);
-  pinMode(TOF_LEFT_XSHUT, OUTPUT);
-  pinMode(TOF_RIGHT_XSHUT, OUTPUT);
+  pinMode(7, 0x1);
+  pinMode(8, 0x1);
 
   // ToF
   //電源オフ
   // digitalWrite(TOF_BACK_XSHUT, LOW);
-  digitalWrite(TOF_LEFT_XSHUT, LOW);
-  digitalWrite(TOF_RIGHT_XSHUT, LOW);
+  digitalWrite(7, 0x0);
+  digitalWrite(8, 0x0);
   delay(100);
   // アドレス変更&計測開始
   // BACK
@@ -108,7 +92,7 @@ void setup()
   // back_senser.startContinuous();
   // back_senser.setAddress(TOF_BACK_ADDR);
   // LEFT
-  pinMode(TOF_LEFT_XSHUT, INPUT);
+  pinMode(7, 0x0);
   delay(50);
   while (!left.init())
   {
@@ -118,9 +102,9 @@ void setup()
 
   left.setTimeout(500);
   left.startContinuous();
-  left.setAddress(TOF_LEFT_ADDR);
+  left.setAddress(0x33);
   // RIGHT
-  pinMode(TOF_RIGHT_XSHUT, INPUT);
+  pinMode(8, 0x0);
   delay(50);
   while (!right.init())
   {
@@ -129,7 +113,7 @@ void setup()
   }
   right.setTimeout(500);
   right.startContinuous();
-  right.setAddress(TOF_RIGHT_ADDR);
+  right.setAddress(0x35);
 
   blink(5);
   // 開始ボタン
@@ -167,13 +151,13 @@ void back()
   l = left.readRangeContinuousMillimeters();
   r = right.readRangeContinuousMillimeters();
   PDreset();
-  while (r + l < IGNORE_LENGTH)
+  while (r + l < 440 /* mm*/)
     PD(v);
 
   blink(1);
   // 転回位置まで後退
   setMotorPulse(v, v);
-  delay(BACK_TIME);
+  delay(600 /* ms*/);
   setMotorPulse(0, 0);
 }
 
@@ -184,7 +168,7 @@ void rightTurn()
   blink(3);
   int v = 150;
   setMotorPulse(v, -v);
-  delay(TURN_TIME);
+  delay(850 /* ms*/);
   setMotorPulse(0, 0);
 }
 
@@ -198,31 +182,31 @@ void goToBall()
   {
     l = left.readRangeContinuousMillimeters();
     r = right.readRangeContinuousMillimeters();
-  } while (l + r > IGNORE_LENGTH);
+  } while (l + r > 440 /* mm*/);
 
   // 検出後PDで直進
   unsigned int startTime = millis();
   PDreset();
-  while ((millis() - startTime) < ARM_DOWN_TIME)
+  while ((millis() - startTime) < 1000)
     PD(v);
   setMotorPulse(0, 0); // 停止
   downArm();
   startTime = millis();
   PDreset();
-  while ((millis() - startTime) < ARM_DOWN_TIME)
+  while ((millis() - startTime) < 1000)
     PD(v);
   setMotorPulse(0, 0); // 停止
 }
 
 void downArm()
 {
-  servo.attach(SERVO_PIN, 544, 2400);
-  servo.write(ARM_UP_POS);
+  servo.attach(2, 544, 2400);
+  servo.write(544);
   int i = servo.read();
-  for (i; i > ARM_DOWN_POS; i++)
+  for (i; i > 1600; i++)
   {
     servo.write(i);
-    delay(ARM_MOVE_SPEED);
+    delay(1 /* ms/puls*/);
   }
   delay(10);
   servo.detach();
@@ -232,10 +216,10 @@ void getBall()
 {
   // アームを持ち上げる
   int i = servo.read();
-  for (i; i > ARM_UP_POS; i--)
+  for (i; i > 544; i--)
   {
     servo.write(i);
-    delay(ARM_MOVE_SPEED);
+    delay(1 /* ms/puls*/);
   }
   delay(10);
 }
@@ -250,11 +234,11 @@ void goToSouko()
   {
     l = left.readRangeContinuousMillimeters();
     r = right.readRangeContinuousMillimeters();
-  } while (l + r > IGNORE_LENGTH);
+  } while (l + r > 440 /* mm*/);
 
   // 交差点に入るまでPD
   PDreset();
-  while (l + r < IGNORE_LENGTH)
+  while (l + r < 440 /* mm*/)
     PD(v);
 
   // 交差点を抜け出すまで直進
@@ -264,12 +248,12 @@ void goToSouko()
   {
     l = left.readRangeContinuousMillimeters();
     r = right.readRangeContinuousMillimeters();
-  } while (l + r > IGNORE_LENGTH);
+  } while (l + r > 440 /* mm*/);
 
   // リリース位置までPDで
   unsigned int startTime = millis();
   PDreset();
-  while ((millis() - startTime) < BALL_RELEASE_TIME)
+  while ((millis() - startTime) < 1500)
     PD(v);
   setMotorPulse(0, 0); // 停止
 }
@@ -279,15 +263,15 @@ void releaseBall()
   blink(3);
   //アームを下す
   int i = servo.read();
-  for (i; i <= ARM_RELEASE_POS; i++)
+  for (i; i <= 1800; i++)
   {
     servo.write(i);
-    delay(ARM_MOVE_SPEED);
+    delay(1 /* ms/puls*/);
   }
   //ちょっと待って
   delay(500);
   //アームを上げる
-  servo.write(ARM_UP_POS);
+  servo.write(544);
   delay(20);
 }
 
@@ -295,9 +279,9 @@ void blink(int n) // LED点滅
 {
   for (int i = 0; i < n; i++)
   {
-    digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(13, 0x1);
     delay(50);
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(13, 0x0);
     delay(100);
   }
 }
@@ -315,9 +299,9 @@ void PD(int v)
   r = right.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
-  f = l + r - ROAD_WIDTH;
-  w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-  x = e / abs(e) * f * KS_NUM / KS_DEN;
+  f = l + r - 350;
+  w = (double)e * 3 / 10 + eDiff * 2 / 20;
+  x = e / ((e)>0?(e):-(e)) * f * 4 / 2;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
@@ -338,7 +322,7 @@ void PD(int v)
 
 void PDdebug(int l, int r, int e, int eDiff, int w, int f)
 {
-#ifdef DEBUG
+
   Serial.print(l);
   Serial.print(",");
   Serial.print(r);
@@ -350,29 +334,29 @@ void PDdebug(int l, int r, int e, int eDiff, int w, int f)
   Serial.print(f);
   Serial.print(",");
   Serial.println(w);
-#endif
+
 }
 
 void setMotorPulse(int left, int right)
 {
   if (left > 0)
   {
-    analogWrite(MOTOR_L_IN1, min(left, 255));
-    analogWrite(MOTOR_L_IN2, 0);
+    analogWrite(5, ((left)<(255)?(left):(255)));
+    analogWrite(6, 0);
   }
   else
   {
-    analogWrite(MOTOR_L_IN1, 0);
-    analogWrite(MOTOR_L_IN2, min(-left, 255));
+    analogWrite(5, 0);
+    analogWrite(6, ((-left)<(255)?(-left):(255)));
   }
   if (right > 0)
   {
-    analogWrite(MOTOR_R_IN1, min(right, 255));
-    analogWrite(MOTOR_R_IN2, 0);
+    analogWrite(9, ((right)<(255)?(right):(255)));
+    analogWrite(10, 0);
   }
   else
   {
-    analogWrite(MOTOR_R_IN1, 0);
-    analogWrite(MOTOR_R_IN2, min(-right, 255));
+    analogWrite(9, 0);
+    analogWrite(10, ((-right)<(255)?(-right):(255)));
   }
 }
