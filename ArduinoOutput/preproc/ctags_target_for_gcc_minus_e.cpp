@@ -23,9 +23,15 @@
 
 
 // 直進用PIDゲイン
-# 33 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+
+
+
+
+
+
+
 // 各種ピン
-# 46 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+# 45 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 // アームサーボ位置
 
 
@@ -57,7 +63,8 @@ void PDreset();
 void PDdebug(int l, int r, int e, int ediff, int w, int f);
 
 // PD制御用グローバル変数
-int l, r;
+int l, r, b;
+int f_B_diff;
 int e, ePrev, w;
 int f, x;
 double eDiff;
@@ -68,30 +75,30 @@ void setup()
   Serial.begin(115200);
   Wire.begin();
   // servo.attach(SERVO_PIN, 544, 2400);
-  //  pinMode(TOF_BACK_XSHUT, OUTPUT);
-  pinMode(7, 0x1);
+  pinMode(11, 0x1);
   pinMode(8, 0x1);
+  pinMode(7, 0x1);
 
   // ToF
   //電源オフ
-  // digitalWrite(TOF_BACK_XSHUT, LOW);
-  digitalWrite(7, 0x0);
+  digitalWrite(11, 0x0);
   digitalWrite(8, 0x0);
+  digitalWrite(7, 0x0);
   delay(100);
   // アドレス変更&計測開始
   // BACK
-  // pinMode(TOF_BACK_XSHUT, INPUT);
-  // delay(50);
-  // while (!back_senser.init())
-  // {
-  //     Serial.write("BACK INIT ERROR!");
-  //     blink(3);
-  // }
-  // back_senser.setTimeout(500);
-  // back_senser.startContinuous();
-  // back_senser.setAddress(TOF_BACK_ADDR);
+  pinMode(11, 0x0);
+  delay(50);
+  while (!back_senser.init())
+  {
+    Serial.write("BACK INIT ERROR!");
+    blink(3);
+  }
+  back_senser.setTimeout(500);
+  back_senser.startContinuous();
+  back_senser.setAddress(0x31);
   // LEFT
-  pinMode(7, 0x0);
+  pinMode(8, 0x0);
   delay(50);
   while (!left.init())
   {
@@ -103,7 +110,7 @@ void setup()
   left.startContinuous();
   left.setAddress(0x33);
   // RIGHT
-  pinMode(8, 0x0);
+  pinMode(7, 0x0);
   delay(50);
   while (!right.init())
   {
@@ -119,11 +126,6 @@ void setup()
   // while (digitalRead(BUTTON_PIN))
   //   ;
   // テストブロック
-  {
-    back();
-    rightTurn();
-    goToBall();
-  }
 }
 
 void loop()
@@ -137,6 +139,15 @@ void loop()
   // rightTurn();               // 右折
   // goToSouko();               // 倉庫まで前進
   // releaseBall();             // ボール収納動作
+  {
+    back();
+    rightTurn();
+    goToBall();
+    back();
+    rightTurn();
+    goToSouko();
+  }
+  // setMotorPulse(-180, -150);
 }
 
 void back()
@@ -149,14 +160,16 @@ void back()
   int v = -150;
   l = left.readRangeContinuousMillimeters();
   r = right.readRangeContinuousMillimeters();
+  b = back_senser.readRangeContinuousMillimeters();
   PDreset();
-  while (r + l < 440 /* mm*/)
+  while (b < 250)
     PD(v);
-
+  for (int i = 0; i < 10; i++)
+    PD(v);
   blink(1);
   // 転回位置まで後退
   setMotorPulse(v, v);
-  delay(600 /* ms*/);
+  delay(500 /* ms*/);
   setMotorPulse(0, 0);
 }
 
@@ -167,7 +180,7 @@ void rightTurn()
   blink(3);
   int v = 150;
   setMotorPulse(v, -v);
-  delay(850 /* ms*/);
+  delay(650 /* ms*/);
   setMotorPulse(0, 0);
 }
 
@@ -189,12 +202,12 @@ void goToBall()
   while ((millis() - startTime) < 1000)
     PD(v);
   setMotorPulse(0, 0); // 停止
-  downArm();
-  startTime = millis();
-  PDreset();
-  while ((millis() - startTime) < 1000)
-    PD(v);
-  setMotorPulse(0, 0); // 停止
+  // downArm();
+  //  startTime = millis();
+  //  PDreset();
+  //  while ((millis() - startTime) < ARM_DOWN_TIME)
+  //    PD(v);
+  //  setMotorPulse(0, 0); // 停止
 }
 
 void downArm()
@@ -296,11 +309,15 @@ void PD(int v)
   t = millis();
   l = left.readRangeContinuousMillimeters();
   r = right.readRangeContinuousMillimeters();
+  b = back_senser.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
+  f_B_diff = r - b;
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
-  f = l + r - 350;
   w = (double)e * 3 / 10 + eDiff * 2 / 20;
-  x = e / ((e)>0?(e):-(e)) * f * 4 / 2;
+  x = f_B_diff * 4 / 2;
+  // 後ろが抜けたら
+  if (b > 250)
+    x = 0;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
@@ -340,11 +357,13 @@ void setMotorPulse(int left, int right)
 {
   if (left > 0)
   {
+    left += 30;
     analogWrite(5, ((left)<(255)?(left):(255)));
     analogWrite(6, 0);
   }
   else
   {
+    left -= 30;
     analogWrite(5, 0);
     analogWrite(6, ((-left)<(255)?(-left):(255)));
   }
