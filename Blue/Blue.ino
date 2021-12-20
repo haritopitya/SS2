@@ -327,7 +327,7 @@ void PD(int v)
   x = f_B_diff * KS_NUM / KS_DEN;
   // 後ろが抜けたら
   if (b > 250)
-    x = 0;
+    x = e / abs(e) * (l + r) * KS_NUM / KS_DEN;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
