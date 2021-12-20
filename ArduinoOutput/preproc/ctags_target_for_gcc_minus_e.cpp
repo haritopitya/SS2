@@ -23,15 +23,9 @@
 
 
 // 直進用PIDゲイン
-
-
-
-
-
-
-
+# 33 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 // 各種ピン
-# 45 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
+# 46 "c:\\Users\\tatu4\\Documents\\匠\\大学\\3年\\3Q\\SS2\\Blue\\Blue.ino"
 // アームサーボ位置
 
 
@@ -311,13 +305,14 @@ void PD(int v)
   r = right.readRangeContinuousMillimeters();
   b = back_senser.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
+  f = l + r - 350;
   f_B_diff = r - b;
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
   w = (double)e * 3 / 10 + eDiff * 2 / 20;
   x = f_B_diff * 4 / 2;
   // 後ろが抜けたら
   if (b > 250)
-    x = 0;
+    x = e / ((e)>0?(e):-(e)) * (l + r - 350) * 4 / 2;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
