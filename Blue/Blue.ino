@@ -28,6 +28,7 @@
 #define KD_DEN 20
 #define KS_NUM 4
 #define KS_DEN 2
+#define ROAD_WIDTH 350
 
 // 各種ピン
 #define MOTOR_L_IN1 5
@@ -321,6 +322,7 @@ void PD(int v)
   r = right.readRangeContinuousMillimeters();
   b = back_senser.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
+  f = l + r - ROAD_WIDTH;
   f_B_diff = r - b;
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
   w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
