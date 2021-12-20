@@ -75,7 +75,7 @@ void PDdebug(int l, int r, int e, int ediff, int w, int f);
 
 // PD制御用グローバル変数
 int l, r, b;
-int f_B_diff;
+int f_b_diff;
 int e, ePrev, w;
 int f, x;
 double eDiff;
@@ -323,10 +323,10 @@ void PD(int v)
   b = back_senser.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
   f = l + r - ROAD_WIDTH;
-  f_B_diff = r - b;
+  f_b_diff = r - b;
   eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
   w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN;
-  x = f_B_diff * KS_NUM / KS_DEN;
+  x = f_b_diff * KS_NUM / KS_DEN;
   // 後ろが抜けたら
   if (b > 250)
     x = e / abs(e) * (l + r - ROAD_WIDTH) * KS_NUM / KS_DEN;
