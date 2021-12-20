@@ -9,20 +9,20 @@
 #define BALL_RELEASE_TIME 1500
 
 // 旋回時間
-#define TURN_TIME 750 // ms
+#define TURN_TIME 650 // ms
 
 // 回転位置までの後退時間
 #define BACK_TIME 500 // ms
 
 // PDを無視する距離(ToFの和の閾値)
-#define IGNORE_LENGTH 430 // mm
+#define IGNORE_LENGTH 440 // mm
 
 // 直進用PIDゲイン
 #define KP_NUM 3
 #define KP_DEN 10
-#define KD_NUM 3
+#define KD_NUM 2
 #define KD_DEN 20
-#define KS_NUM 3
+#define KS_NUM 4
 #define KS_DEN 2
 #define ROAD_WIDTH 350
 
@@ -36,8 +36,8 @@
 #define BUTTON_PIN 4
 
 #define TOF_BACK_XSHUT 11
-#define TOF_LEFT_XSHUT 12
-#define TOF_RIGHT_XSHUT 13
+#define TOF_LEFT_XSHUT 8
+#define TOF_RIGHT_XSHUT 7
 
 // アームサーボ位置
 #define ARM_UP_POS 544
@@ -70,9 +70,10 @@ void PDreset();
 void PDdebug(int l, int r, int e, int ediff, int w, int f);
 
 // PD制御用グローバル変数
-int l, r;
+int l, r, b;
+int f_b_diff;
 int e, ePrev, w;
-int f;
+int f, x;
 double eDiff;
 unsigned int t, prevTime;
 
@@ -81,29 +82,29 @@ void setup()
   Serial.begin(115200);
   Wire.begin();
   // servo.attach(SERVO_PIN, 544, 2400);
-  // pinMode(TOF_BACK_XSHUT, OUTPUT);
+  pinMode(TOF_BACK_XSHUT, OUTPUT);
   pinMode(TOF_LEFT_XSHUT, OUTPUT);
   pinMode(TOF_RIGHT_XSHUT, OUTPUT);
 
   // ToF
   //電源オフ
-  // digitalWrite(TOF_BACK_XSHUT, LOW);
+  digitalWrite(TOF_BACK_XSHUT, LOW);
   digitalWrite(TOF_LEFT_XSHUT, LOW);
   digitalWrite(TOF_RIGHT_XSHUT, LOW);
   delay(100);
   Serial.print("start !!");
   // アドレス変更&計測開始
   // BACK
-  // pinMode(TOF_BACK_XSHUT, INPUT);
-  // delay(50);
-  // while (!back_senser.init())
-  // {
-  //     Serial.write("BACK INIT ERROR!");
-  //     blink(3);
-  // }
-  // back_senser.setTimeout(500);
-  // back_senser.startContinuous();
-  // back_senser.setAddress(TOF_BACK_ADDR);
+  pinMode(TOF_BACK_XSHUT, INPUT);
+  delay(50);
+  while (!back_senser.init())
+  {
+    Serial.write("BACK INIT ERROR!");
+    blink(3);
+  }
+  back_senser.setTimeout(500);
+  back_senser.startContinuous();
+  back_senser.setAddress(TOF_BACK_ADDR);
   // LEFT
   pinMode(TOF_LEFT_XSHUT, INPUT);
   delay(50);
@@ -153,10 +154,12 @@ void back()
   int v = -150;
   l = left.readRangeContinuousMillimeters();
   r = right.readRangeContinuousMillimeters();
+  b = back_senser.readRangeContinuousMillimeters();
   PDreset();
-  while (r + l < IGNORE_LENGTH)
+  while (b < 250)
     PD(v);
-
+  for (int i = 0; i < 10; i++)
+    PD(v);
   blink(1);
   // 転回位置まで後退
   setMotorPulse(v, v);
@@ -292,21 +295,27 @@ void PD(int v)
   t = millis();
   l = left.readRangeContinuousMillimeters();
   r = right.readRangeContinuousMillimeters();
+  b = back_senser.readRangeContinuousMillimeters();
   e = r - l; // 右が離れれば正
-  eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
   f = l + r - ROAD_WIDTH;
+  f_b_diff = r - b;
+  eDiff = (e - ePrev) * 1000.0 / (t - prevTime);
   w = (double)e * KP_NUM / KP_DEN + eDiff * KD_NUM / KD_DEN - e / abs(e) * f * KS_NUM / KS_DEN;
+  x = f_b_diff * KS_NUM / KS_DEN;
+  // 後ろが抜けたら
+  if (b > 250)
+    x = e / abs(e) * (l + r - ROAD_WIDTH) * KS_NUM / KS_DEN;
   int leftSpeed, rightSpeed;
   // wが正のとき右が遠い->左(の絶対値)を速くする
   if (v > 0)
   {
-    leftSpeed = v + w;
-    rightSpeed = v - w;
+    leftSpeed = v + (w + x);
+    rightSpeed = v - (w + x);
   }
   else
   {
-    leftSpeed = v - w;
-    rightSpeed = v + w;
+    leftSpeed = v - (w - x);
+    rightSpeed = v + (w - x);
   }
   setMotorPulse(leftSpeed, rightSpeed);
   PDdebug(l, r, e, (int)eDiff, w, f);
