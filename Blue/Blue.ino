@@ -133,6 +133,10 @@ void setup()
   right.setAddress(TOF_RIGHT_ADDR);
 
   blink(5);
+
+  servo.attach(SERVO_PIN, 544, 2400);
+  servo.write(544);
+  servo.detach();
   // 開始ボタン
   // while (digitalRead(BUTTON_PIN))
   //   ;
@@ -153,7 +157,9 @@ void loop()
   {
     back();
     rightTurn();
+    downArm();
     goToBall();
+    getBall();
     back();
     rightTurn();
     goToSouko();
@@ -226,7 +232,7 @@ void downArm()
   servo.attach(SERVO_PIN, 544, 2400);
   servo.write(ARM_UP_POS);
   int i = servo.read();
-  for (i; i > ARM_DOWN_POS; i++)
+  for (i; i < ARM_DOWN_POS; i++)
   {
     servo.write(i);
     delay(ARM_MOVE_SPEED);
@@ -238,6 +244,8 @@ void downArm()
 void getBall()
 {
   // アームを持ち上げる
+  servo.attach(SERVO_PIN, 544, 2400);
+  servo.write(ARM_DOWN_POS);
   int i = servo.read();
   for (i; i > ARM_UP_POS; i--)
   {
@@ -245,6 +253,7 @@ void getBall()
     delay(ARM_MOVE_SPEED);
   }
   delay(10);
+  servo.detach();
 }
 
 void goToSouko()
@@ -262,6 +271,7 @@ void goToSouko()
   // 交差点に入るまでPD
   PDreset();
   while (l + r < IGNORE_LENGTH)
+    // while (l < IGNORE_LENGTH / 2 || r < IGNORE_LENGTH / 2)
     PD(v);
 
   // 交差点を抜け出すまで直進
