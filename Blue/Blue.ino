@@ -5,15 +5,15 @@
 #define DEBUG
 
 // 停止までの時間
-#define BALL_GET_TIME 1000
-#define ARM_DOWN_TIME 1000
+#define BALL_GET_TIME 1800
+#define ARM_DOWN_TIME 1800
 #define BALL_RELEASE_TIME 1500
 
 // 旋回時間
-#define TURN_TIME 650 // ms
+#define TURN_TIME 1100 // ms
 
 // 回転位置までの後退時間
-#define BACK_TIME 500 // ms
+#define BACK_TIME 750 // ms
 
 // 後方安全距離
 #define BACK_SAFTY_DISTANCE 300 // mm
@@ -26,8 +26,8 @@
 #define KP_DEN 10
 #define KD_NUM 2
 #define KD_DEN 20
-#define KS_NUM 4
-#define KS_DEN 2
+#define KS_NUM 7
+#define KS_DEN 3
 #define ROAD_WIDTH 350
 
 // 各種ピン
@@ -45,8 +45,8 @@
 
 // アームサーボ位置
 #define ARM_UP_POS 544
-#define ARM_DOWN_POS 1600
-#define ARM_RELEASE_POS 1800
+#define ARM_DOWN_POS 1700
+#define ARM_RELEASE_POS 1900
 #define ARM_MOVE_SPEED 1 // ms/puls
 
 // TOFADDRESS
@@ -71,7 +71,7 @@ void setMotorPulse(int left, int right);
 void blink(int n);
 void PD(int v);
 void PDreset();
-void PDdebug(int l, int r, int e, int ediff, int w, int f);
+void PDdebug(int l, int r, int b, int e, int ediff, int w, int f);
 
 // PD制御用グローバル変数
 int l, r, b;
@@ -136,6 +136,7 @@ void setup()
 
   servo.attach(SERVO_PIN, 544, 2400);
   servo.write(544);
+  delay(1000);
   servo.detach();
   // 開始ボタン
   // while (digitalRead(BUTTON_PIN))
@@ -163,6 +164,7 @@ void loop()
     back();
     rightTurn();
     goToSouko();
+    releaseBall();
   }
   // setMotorPulse(-180, -150);
 }
@@ -231,13 +233,14 @@ void downArm()
 {
   servo.attach(SERVO_PIN, 544, 2400);
   servo.write(ARM_UP_POS);
+  delay(100);
   int i = servo.read();
   for (i; i < ARM_DOWN_POS; i++)
   {
     servo.write(i);
     delay(ARM_MOVE_SPEED);
   }
-  delay(10);
+  delay(100);
   servo.detach();
 }
 
@@ -246,13 +249,14 @@ void getBall()
   // アームを持ち上げる
   servo.attach(SERVO_PIN, 544, 2400);
   servo.write(ARM_DOWN_POS);
+  delay(100);
   int i = servo.read();
   for (i; i > ARM_UP_POS; i--)
   {
     servo.write(i);
     delay(ARM_MOVE_SPEED);
   }
-  delay(10);
+  delay(1000);
   servo.detach();
 }
 
@@ -271,7 +275,6 @@ void goToSouko()
   // 交差点に入るまでPD
   PDreset();
   while (l + r < IGNORE_LENGTH)
-    // while (l < IGNORE_LENGTH / 2 || r < IGNORE_LENGTH / 2)
     PD(v);
 
   // 交差点を抜け出すまで直進
@@ -294,6 +297,7 @@ void goToSouko()
 void releaseBall()
 {
   blink(3);
+  servo.attach(SERVO_PIN, 544, 2400);
   //アームを下す
   int i = servo.read();
   for (i; i <= ARM_RELEASE_POS; i++)
@@ -305,7 +309,8 @@ void releaseBall()
   delay(500);
   //アームを上げる
   servo.write(ARM_UP_POS);
-  delay(20);
+  delay(1000);
+  servo.detach();
 }
 
 void blink(int n) // LED点滅
@@ -353,17 +358,19 @@ void PD(int v)
     rightSpeed = v + (w - x);
   }
   setMotorPulse(leftSpeed, rightSpeed);
-  PDdebug(l, r, e, (int)eDiff, w, f);
+  PDdebug(l, r, b, e, (int)eDiff, w, f);
   ePrev = e;
   prevTime = t;
 }
 
-void PDdebug(int l, int r, int e, int eDiff, int w, int f)
+void PDdebug(int l, int r, int b, int e, int eDiff, int w, int f)
 {
 #ifdef DEBUG
   Serial.print(l);
   Serial.print(",");
   Serial.print(r);
+  Serial.print(",");
+  Serial.print(b);
   Serial.print(",");
   Serial.print(e);
   Serial.print(",");
@@ -379,13 +386,13 @@ void setMotorPulse(int left, int right)
 {
   if (left > 0)
   {
-    left += 30;
+    left += 5;
     analogWrite(MOTOR_L_IN1, min(left, 255));
     analogWrite(MOTOR_L_IN2, 0);
   }
   else
   {
-    left -= 30;
+    left -= 5;
     analogWrite(MOTOR_L_IN1, 0);
     analogWrite(MOTOR_L_IN2, min(-left, 255));
   }
